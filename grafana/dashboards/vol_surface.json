@@ -1,0 +1,66 @@
+{
+  "dashboard": {
+    "title": "Implied Vol Surface Analytics",
+    "timezone": "browser",
+    "refresh": "5m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "ATM IV Time Series",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "SELECT date, avg_iv FROM atm_vol_timeseries WHERE ticker = 'SPY' ORDER BY date"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Vol Smile (SPY)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "SELECT strike_price, implied_vol FROM vol_smile WHERE ticker = 'SPY' AND expiry = '2025-06-20'"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Term Structure",
+        "type": "barchart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "SELECT expiry_bucket, avg_iv FROM term_structure WHERE ticker = 'SPY'"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Cross-Ticker IV Comparison",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "SELECT * FROM cross_ticker_comparison"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "ticker",
+          "type": "query",
+          "query": "SHOW TABLES"
+        }
+      ]
+    }
+  }
+}
