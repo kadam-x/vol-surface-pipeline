@@ -6,61 +6,67 @@
     "panels": [
       {
         "id": 1,
-        "title": "ATM IV Time Series",
+        "title": "Term Structure (ATM IV by Expiry)",
         "type": "timeseries",
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
         "targets": [
           {
             "refId": "A",
-            "expr": "SELECT date, avg_iv FROM atm_vol_timeseries WHERE ticker = 'SPY' ORDER BY date"
+            "type": "json",
+            "source": "url",
+            "url": "/term-structure/SPY",
+            "parser": "json"
           }
         ]
       },
       {
         "id": 2,
-        "title": "Vol Smile (SPY)",
+        "title": "Vol Smile - ATM Options",
         "type": "timeseries",
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
         "targets": [
           {
             "refId": "A",
-            "expr": "SELECT strike_price, implied_vol FROM vol_smile WHERE ticker = 'SPY' AND expiry = '2025-06-20'"
+            "type": "json",
+            "source": "url",
+            "url": "/vol-surface/SPY",
+            "parser": "json"
           }
         ]
       },
       {
         "id": 3,
-        "title": "Term Structure",
-        "type": "barchart",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "title": "Available Tickers",
+        "type": "table",
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 8},
         "targets": [
           {
             "refId": "A",
-            "expr": "SELECT expiry_bucket, avg_iv FROM term_structure WHERE ticker = 'SPY'"
+            "type": "json",
+            "source": "url",
+            "url": "/tickers",
+            "parser": "json"
           }
         ]
       },
       {
         "id": 4,
-        "title": "Cross-Ticker IV Comparison",
-        "type": "table",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "title": "API Health",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 8},
         "targets": [
           {
             "refId": "A",
-            "expr": "SELECT * FROM cross_ticker_comparison"
+            "type": "json",
+            "source": "url",
+            "url": "/health",
+            "parser": "json"
           }
         ]
       }
     ],
     "templating": {
-      "list": [
-        {
-          "name": "ticker",
-          "type": "query",
-          "query": "SHOW TABLES"
-        }
-      ]
+      "list": []
     }
   }
 }

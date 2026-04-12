@@ -10,6 +10,9 @@ app = FastAPI(title="Vol Surface API", version="0.1.0")
 
 DB_PATH = os.getenv("DUCKDB_PATH", "/data/duckdb/vol_surface.db")
 
+@app.get("/")
+def root():
+    return [{"status": "ok"}]
 
 @app.get("/health")
 def health_check():

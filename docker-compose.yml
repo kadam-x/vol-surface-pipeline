@@ -64,19 +64,24 @@ services:
         condition: service_healthy
 
   grafana:
-    image: grafana/grafana:latest
-    container_name: vol-surface-grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-      GF_INSTALL_PLUGINS: frser-duckdb-datasource
-    volumes:
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
-      - grafana_data:/var/lib/grafana
-      - duckdb_data:/data/duckdb
-    ports:
-      - "3000:3000"
+      image: grafana/grafana:latest
+      container_name: vol-surface-grafana
+      environment:
+        GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+        GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+        GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
+      volumes:
+        - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+        - ./grafana/datasources:/etc/grafana/provisioning/datasources
+        - grafana_data:/var/lib/grafana
+      ports:
+        - "3000:3000"
+      depends_on:
+        - fastapi
+
+networks:
+  default:
+    name: vol-surface-network
 
 volumes:
   minio_data:
