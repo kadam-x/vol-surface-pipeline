@@ -50,7 +50,7 @@ Egyéb függőség nem szükséges — minden a konténereken belül fut.
 **1. Repository klónozása**
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/kadam-x/vol-surface-pipeline
 cd vol-surface-pipeline
 ```
 
