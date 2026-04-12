@@ -1,0 +1,23 @@
+# syntax=docker/dockerfile:1
+FROM apache/airflow:2.8.1-python3.11
+
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /data/duckdb \
+    && chown -R airflow:root /data/duckdb
+
+COPY airflow-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown airflow:root /entrypoint.sh
+
+USER airflow
+RUN pip install --no-cache-dir \
+    yfinance \
+    httpx \
+    requests \
+    pandas \
+    pyarrow \
+    scipy \
+    duckdb \
+    minio

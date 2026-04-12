@@ -31,16 +31,19 @@ def fetch_risk_free_rate(api_key: Optional[str] = None, use_fallback: bool = Tru
         params = {
             "series_id": "DGS10",
             "api_key": api_key,
-            "observation_date": "latest",
+            "sort_order": "desc",
+            "limit": "1",
             "file_type": "json",
         }
-        
         response = httpx.get(url, params=params, timeout=10)
         response.raise_for_status()
         
         data = response.json()
-        rate = float(data['observations'][0]['value']) / 100
-        
+        value = data['observations'][0]['value']
+        if value == ".":
+            raise ValueError("FRED returned missing value for DGS10")
+        rate = float(value) / 100
+
         print(f"Fetched risk-free rate from FRED: {rate}")
         return rate
         

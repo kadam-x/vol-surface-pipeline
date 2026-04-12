@@ -14,7 +14,7 @@ class MinioClient:
         secret_key: Optional[str] = None,
         bucket: Optional[str] = None,
     ):
-        self.endpoint = endpoint or os.getenv("MINIO_ENDPOINT", "localhost:9000")
+        self.endpoint = endpoint or os.getenv("MINIO_ENDPOINT", "minio:9000")
         self.access_key = access_key or os.getenv("MINIO_ACCESS_KEY", "minioadmin")
         self.secret_key = secret_key or os.getenv("MINIO_SECRET_KEY", "minioadmin")
         self.bucket = bucket or os.getenv("MINIO_BUCKET", "vol-surface-raw")
@@ -23,6 +23,7 @@ class MinioClient:
             self.endpoint,
             access_key=self.access_key,
             secret_key=self.secret_key,
+        secure=False,
         )
         self._ensure_bucket()
     

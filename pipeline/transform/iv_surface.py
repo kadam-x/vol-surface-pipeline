@@ -1,147 +1,150 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
 from scipy.optimize import brentq
 from typing import Optional
-from datetime import datetime
 
 
-def black_scholes_price(
-    S: float,
-    K: float,
-    T: float,
-    r: float,
-    sigma: float,
-    option_type: str,
-) -> float:
+def black_scholes_price(S: float, K: float, T: float, r: float, sigma: float, option_type: str) -> float:
     """
-    Calculate Black-Scholes option price.
-    
+    Compute Black-Scholes theoretical price for a European option.
+
     Args:
-        S: Spot price
+        S: Underlying price
         K: Strike price
-        T: Time to expiry (years)
-        r: Risk-free rate
-        sigma: Volatility
+        T: Time to expiry in years
+        r: Risk-free rate as decimal
+        sigma: Volatility as decimal
         option_type: 'call' or 'put'
-    
+
     Returns:
-        Option price
+        Theoretical option price
     """
-    if T <= 0 or sigma <= 0:
-        return 0.0
-    
-    d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
-    
-    if option_type.lower() == 'call':
-        price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+
+    if option_type == 'call':
+        return S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
     else:
-        price = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
-    
-    return price
+        return K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
 
-def implied_volatility(
+def compute_iv(
+    market_price: float,
     S: float,
     K: float,
     T: float,
     r: float,
-    market_price: float,
     option_type: str,
-    tol: float = 1e-6,
+    lower_bound: float = 1e-6,
+    upper_bound: float = 20.0,
 ) -> Optional[float]:
     """
-    Compute implied volatility using Black-Scholes inversion.
-    
-    Uses Brent's method to solve for sigma that produces the market price.
-    
+    Compute implied volatility via Brent's method (Black-Scholes inversion).
+
     Args:
-        S: Spot price
+        market_price: Observed market price of the option
+        S: Underlying price
         K: Strike price
-        T: Time to expiry (years)
-        r: Risk-free rate
-        market_price: Observed option price
+        T: Time to expiry in years
+        r: Risk-free rate as decimal
         option_type: 'call' or 'put'
-        tol: Tolerance for convergence
-    
+        lower_bound: Lower sigma bound for root search
+        upper_bound: Upper sigma bound for root search
+
     Returns:
-        Implied volatility as decimal (e.g., 0.20 for 20%), or None if failed
+        Implied volatility as decimal, or None if computation fails
     """
-    if T <= 0 or market_price <= 0:
+    if T <= 0 or market_price <= 0 or S <= 0 or K <= 0:
         return None
-    
-    intrinsic = max(0, S - K) if option_type.lower() == 'call' else max(0, K - S)
-    if market_price <= intrinsic:
+
+    # intrinsic value check — market price must exceed intrinsic value
+    if option_type == 'call':
+        intrinsic = max(S - K * np.exp(-r * T), 0)
+    else:
+        intrinsic = max(K * np.exp(-r * T) - S, 0)
+
+    if market_price < intrinsic - 1e-4:
         return None
-    
-    def objective(sigma):
-        return black_scholes_price(S, K, T, r, sigma, option_type) - market_price
-    
+
+    objective = lambda sigma: black_scholes_price(S, K, T, r, sigma, option_type) - market_price
+
     try:
-        iv = brentq(objective, 0.001, 5.0, xtol=tol)
-        return float(iv)
+        if objective(lower_bound) * objective(upper_bound) > 0:
+            return None
+
+        iv = brentq(objective, lower_bound, upper_bound, xtol=1e-6, maxiter=500)
+        return iv if 0 < iv < upper_bound else None
+
     except (ValueError, RuntimeError):
         return None
 
 
-def compute_iv_surface(
-    df: pd.DataFrame,
-    spot_price: float,
-    risk_free_rate: float,
-    reference_date: Optional[pd.Timestamp] = None,
-) -> pd.DataFrame:
+def compute_iv_surface(df: pd.DataFrame, risk_free_rate: float) -> pd.DataFrame:
     """
-    Compute implied volatility for all options in the DataFrame.
-    
+    Compute implied volatility for every option in the DataFrame.
+
     Args:
-        df: Options DataFrame (cleaned, with strike, expiry_date, last_price, option_type)
-        spot_price: Current underlying price
+        df: Cleaned options DataFrame (output of clean.py)
         risk_free_rate: Risk-free rate as decimal
-        reference_date: Reference date for time calculation
-    
+
     Returns:
-        DataFrame with added 'implied_vol' column
+        DataFrame with implied_vol column added, rows where IV
+        could not be computed are dropped
     """
     df = df.copy()
-    
-    if reference_date is None:
-        reference_date = pd.Timestamp.now().normalize()
-    
-    df['T'] = (df['expiry_date'] - reference_date).dt.days / 365.0
-    df = df[df['T'] > 0]
-    
-    iv_values = []
-    for _, row in df.iterrows():
-        iv = implied_volatility(
-            S=spot_price,
+
+    df['T'] = df['days_to_expiry'] / 365.0
+
+    df['implied_vol'] = df.apply(
+        lambda row: compute_iv(
+            market_price=row['mid_price'],
+            S=row['underlying_price'],
             K=row['strike'],
             T=row['T'],
             r=risk_free_rate,
-            market_price=row['last_price'],
             option_type=row['option_type'],
-        )
-        iv_values.append(iv)
-    
-    df['implied_vol'] = iv_values
-    
+        ),
+        axis=1,
+    )
+
+    before = len(df)
+    df = df.dropna(subset=['implied_vol'])
+    after = len(df)
+
+    print(f"IV computed for {after}/{before} options ({before - after} dropped)")
+
+    df = df[(df['implied_vol'] >= 0.01) & (df['implied_vol'] <= 5.0)]
+
     return df.reset_index(drop=True)
 
 
 if __name__ == "__main__":
-    from ingestion.fetch_options import fetch_underlying_price
-    
-    spot = fetch_underlying_price("SPY")
-    print(f"SPY spot: {spot}")
-    
-    result = compute_iv_surface(
-        pd.DataFrame({
-            'strike': [500, 510, 520],
-            'expiry_date': pd.to_datetime(['2025-06-20', '2025-06-20', '2025-06-20']),
-            'last_price': [5.0, 2.5, 1.0],
-            'option_type': ['call', 'call', 'call'],
-        }),
-        spot_price=spot,
-        risk_free_rate=0.045,
-    )
-    print(result)
+    import sys
+    sys.path.insert(0, '.')
+    from ingestion.fetch_options import fetch_options_chain
+    from ingestion.fetch_macro import fetch_risk_free_rate
+    from transform.clean import clean_options_data, add_moneyness, add_expiry_buckets
+
+    ticker = "SPY"
+    print(f"Fetching options for {ticker}...")
+    raw = fetch_options_chain(ticker)
+
+    print("Cleaning...")
+    cleaned = clean_options_data(raw)
+    cleaned = add_moneyness(cleaned)
+    cleaned = add_expiry_buckets(cleaned)
+
+    print("Fetching risk-free rate...")
+    r = fetch_risk_free_rate()
+
+    print("Computing IV surface...")
+    surface = compute_iv_surface(cleaned, r)
+
+    print(f"\nIV surface shape: {surface.shape}")
+    print(surface[['ticker', 'strike', 'expiry_date', 'option_type',
+                    'underlying_price', 'mid_price', 'implied_vol',
+                    'moneyness_bucket', 'expiry_bucket']].head(10))
+
+    print("\nIV stats:")
+    print(surface['implied_vol'].describe())

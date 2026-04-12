@@ -22,6 +22,8 @@ def fetch_options_chain(ticker: str, expiry_filter: Optional[int] = None) -> pd.
     expirations = yf_ticker.options
     if not expirations:
         raise ValueError(f"No options data available for {ticker}")
+
+    underlying_price = fetch_underlying_price(ticker) 
     
     if expiry_filter:
         expirations = expirations[:expiry_filter]
@@ -46,6 +48,8 @@ def fetch_options_chain(ticker: str, expiry_filter: Optional[int] = None) -> pd.
                         'ask': row.get('ask'),
                         'volume': row.get('volume'),
                         'open_interest': row.get('openInterest'),
+                        'mid_price': (row.get('bid', 0) + row.get('ask', 0)) / 2,
+                        'underlying_price': underlying_price,
                     })
         except Exception as e:
             print(f"Warning: Failed to fetch options for {exp_date}: {e}")
@@ -60,11 +64,12 @@ def fetch_options_chain(ticker: str, expiry_filter: Optional[int] = None) -> pd.
 
 
 def fetch_underlying_price(ticker: str) -> float:
-    """Fetch current underlying price for the ticker."""
     yf_ticker = yf.Ticker(ticker)
     info = yf_ticker.info
-    return info.get('currentPrice') or info.get('regularMarketPrice')
-
+    price = info.get('currentPrice') or info.get('regularMarketPrice')
+    if price is None:
+        raise ValueError(f"Could not fetch underlying price for {ticker}")
+    return float(price)
 
 if __name__ == "__main__":
     tickers = os.getenv("TARGET_TICKERS", "SPY").split(",")

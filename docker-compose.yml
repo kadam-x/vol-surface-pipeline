@@ -17,23 +17,22 @@ services:
       timeout: 20s
       retries: 3
 
-  duckdb:
-    image: python:3.11-slim
-    container_name: vol-surface-duckdb
-    volumes:
-      - duckdb_data:/data
-    command: ["sleep", "infinity"]
-
-  airflow-webserver:
-    image: apache/airflow:2.8.1-python3.11
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
     container_name: vol-surface-airflow
     environment:
-      AIRFLOW__CORE__EXECUTOR: ${AIRFLOW__CORE__EXECUTOR:-SequentialExecutor}
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////home/airflow/airflow.db
-      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
-      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_USER:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_PASSWORD:-admin}
+      DUCKDB_PATH: /data/duckdb/vol_surface.db
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./pipeline:/opt/airflow/pipeline
@@ -41,17 +40,10 @@ services:
       - duckdb_data:/data/duckdb
     ports:
       - "8080:8080"
-    command: >
-      bash -c "
-        mkdir -p /home/airflow /data/duckdb /opt/airflow/dags /opt/airflow/pipeline &&
-        airflow db init &&
-        airflow users create -r Admin -u admin -e admin@example.com -p admin -f Admin -l User &&
-        airflow webserver &
-        sleep 10 &&
-        airflow scheduler
-      "
+    command: bash /entrypoint.sh
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
 
   fastapi:
     build:
@@ -59,33 +51,32 @@ services:
       dockerfile: Dockerfile.fastapi
     container_name: vol-surface-fastapi
     environment:
-      DUCKDB_PATH: /data/warehouse/vol_surface.db
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-localhost:9000}
+      DUCKDB_PATH: /data/duckdb/vol_surface.db
+      MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
     volumes:
-      - duckdb_data:/data/warehouse
+      - duckdb_data:/data/duckdb
     ports:
       - "8000:8000"
     depends_on:
-      - duckdb
+      minio:
+        condition: service_healthy
 
   grafana:
     image: grafana/grafana:latest
     container_name: vol-surface-grafana
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_DATOURCES_NAME: DuckDB
-      GF_DATOURCES_TYPE: grafana-datasources
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: frser-duckdb-datasource
     volumes:
       - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/datasources:/etc/grafana/provisioning/datasources
       - grafana_data:/var/lib/grafana
+      - duckdb_data:/data/duckdb
     ports:
       - "3000:3000"
-    depends_on:
-      - duckdb
 
 volumes:
   minio_data:
