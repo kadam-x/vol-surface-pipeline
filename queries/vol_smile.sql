@@ -1,6 +1,6 @@
 -- Vol Smile
--- IV across strikes for a single expiry (shows smile/skew shape)
--- Usage: Visualize vol skew, identify risk preferences
+-- IV strike-ok függvényében egy adott lejáratra (smile/ferdeség alak)
+-- Felhasználás: Vol skew vizualizálása, kockázati preferenciák azonosítása
 
 SELECT 
     ds.strike_price,

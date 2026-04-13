@@ -1,6 +1,6 @@
--- Term Structure
--- IV by expiry bucket for a given ticker on a given date
--- Usage: Analyze forward vol expectations, term structure dynamics
+-- Lejárat Szerkezet (Term Structure)
+-- IV lejárat bucket szerint egy adott napon egy adott tickerre
+-- Felhasználás: Forward vol várakozások elemzése, term structure dinamika
 
 SELECT 
     de.expiry_bucket,

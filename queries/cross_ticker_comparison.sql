@@ -1,6 +1,6 @@
--- Cross-Ticker Vol Comparison
--- Compare 30-day ATM IV across multiple tickers
--- Usage: Relative value analysis, sector comparison
+-- Kereszt-ticker Vol Összehasonlítás
+-- 30 napos ATM IV összehasonlítása több tickeren
+-- Felhasználás: Relatív érték elemzés, szektor összehasonlítás
 
 SELECT 
     f.snapshot_date AS date,

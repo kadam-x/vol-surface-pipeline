@@ -1,6 +1,6 @@
--- ATM Vol Time Series
--- Track at-the-money IV per ticker over time
--- Usage: Monitor IV trends, detect vol regime changes
+-- ATM Vol Idősor
+-- ATM IV követése tickerenként az idő során
+-- Felhasználás: IV trendek monitorozása, vol regime változások detektálása
 
 SELECT 
     f.snapshot_date AS date,

@@ -16,6 +16,8 @@ A projekt a BME *Data Engineering a gyakorlatban* tárgy opcionális házi felad
                                                                                   [Grafana Dashboard]
 ```
 
+![](pics/pipeline.png)
+
 A pipeline Apache Airflow alatt fut, hétköznaponként 18:00 UTC-kor. A nyers opciós adatok Parquet formátumban kerülnek MinIO-ba, a transzformáció Pandas és SciPy segítségével történik, az eredmény egy csillag sémájú DuckDB adattárházba töltődik, és FastAPI végpontokon keresztül kiszolgált.
 
 ---
